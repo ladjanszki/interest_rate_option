@@ -1,0 +1,9 @@
+digraph {
+  a [shape=box label="lalal\nhehehe\nbabab" pos="0,0!"]
+  b [shape=box pos="1,0!"]
+  c [shape=box pos="1,-1!"]
+  d [shape=box pos="1,1!"]
+  a -> b
+  a -> c
+  a -> d
+}
