@@ -57,7 +57,11 @@ class Tree:
         self.xSpacing = 4
         self.ySpacing = 2
 
+        # Transition probability dictionary
+        self.transProb = None
+
         # Creating the nodes
+        # TODO: can be factored out to a method
         self.nodes = {} 
         for level in range(self.nLevel):
             self.nodes[level] = {}
@@ -67,7 +71,11 @@ class Tree:
                 self.nodes[level][rateLevel] = Node(nodeName, self.dt * level, rateLevel)
 
         # Setting the root node
+        # TODO: can be factored out to a method
         self.nodes[0][0].isRoot = True
+
+        # Building the transition probability dictionary
+        self.transProbDict()
 
         # Adding connections, building the tree
         self.addConnections()
@@ -75,10 +83,74 @@ class Tree:
         # Adding the short rates to the nodes
         self.addRates()
 
+        # Calculating transition probabilities for all children
+        #self.calcTransProb()
+        
         # Delete orphan nodes
         self.deleteOrphans()
 
+    def transProbDict(self):
+        '''
+        This function builds a dictionary with the transition probabilities 
+        for different branching schemes
+
+        The dictionary then save in the tree class and used when the connections in the tree are built
+
+        The probabilities have to be calculated for all rateLevels of the tree (j dependence)
+        This can be achieved by calculating for the last level where all rateLevels are present
+        '''
+
+
+        pass
+
+        ## Short notations for readable expressions
+        #a = self.theta
+
+        ## Building the empty dictionary
+        #level = self.nLevel - 1 # Building for the last level
+        #for rateLevel in range(-level, level + 1):
+        #    self.transProb[j] = {}
+        #    for idx1 in range(-1, 2):
+        #        self.transProb[j][idx1] = {}
+        #        for idx2 in range(-1, 2): 
+        #            self.transProb[j][idx1][idx2] = None
+
+        ## Calculating the probabilities
+        #level = self.nLevel - 1 # Building for the last level
+        #for rateLevel in range(-level, level + 1):
+
+        #    # Short notations for readable expressions
+        #    j = rateLevel
+
+        #    self.transProb[j] = {}
+
+        #    # Branching -1 (down, c)
+        #    self.transProb[j][-1][1]  = (7 / 6) + (1 / 2) * (a**2 * j**2 * dt**2 - 3 * a * j * dt)  
+        #    self.transProb[j][-1][0]  = (-1 / 3) - a**2 * j**2 * dt**2 + 2 * a * j * dt
+        #    self.transProb[j][-1][-1] = (1 / 6) + (1 / 2) * (a**2 * j**2 * dt**2 - a * j * dt)  
  
+        #    # Branching 0 (mid, a)
+        #    self.transProb[j][0][1]  = (1 / 6) + (1 / 2) * (a**2 * j**2 * dt**2 - a * j * dt)  
+        #    self.transProb[j][0][0]  = (2 / 3) - a**2 * j**2 * dt**2
+        #    self.transProb[j][0][-1] = (1 / 6) + (1 / 2) * (a**2 * j**2 * dt**2 + a * j * dt)  
+        #    
+        #    # Branching 1 (up, b)
+        #    self.transProb[j][1][1]  = (1 / 6) + (1 / 2) * (a**2 * j**2 * dt**2 + a * j * dt)  
+        #    self.transProb[j][1][0]  = (-1 / 3) - a**2 * j**2 * dt**2 - 2 * a * j * dt
+        #    self.transProb[j][1][-1] = (7 / 6) + (1 / 2) * (a**2 * j**2 * dt**2 + 3 * a * j * dt)  
+
+
+        ## Chacking if probabilities sum to 1
+        #level = self.nLevel - 1 
+        #for rateLevel in range(-level, level + 1):
+        #    for idx1 in range(-1, 2):
+
+        #        probSum = 0
+        #        for idx2 in range(-1, 2): 
+        #            probSum += slef.transProb[rateLevel][idx1][idx2]
+
+        #        print(rateLevel, idx1, probSum)
+         
     def addConnections(self):
         '''
         Special branching can be added based on the rateLevel
@@ -101,7 +173,10 @@ class Tree:
          
                 
                 for offset in range(-1, 2):
-                    actNode.children.append((level + 1, rateLevel + offset + actNode.branching))
+                    #childTuple = (level + 1, rateLevel + offset + actNode.branching, #PROB HERE)
+                    childTuple = (level + 1, rateLevel + offset + actNode.branching)
+                    actNode.children.append(childTuple)
+                    #actNode.children.append((level + 1, rateLevel + offset + actNode.branching))
 
         # Building the parent list
         for level in range(self.nLevel - 1):
@@ -112,11 +187,32 @@ class Tree:
                     self.nodes[child[0]][child[1]].parents.append((level, rateLevel))
 
     def addRates(self):
+        '''
+        Adding the short rate according to the first stage (zero tree mean)
+        '''
         for level in range(self.nLevel):
             for rateLevel in range(-level, level + 1):
                 actNode = self.nodes[level][rateLevel]
                 actNode.R = rateLevel * self.dR 
 
+    #def calcTransProb(self):
+    #    '''
+    #    Transition probabilities for all children
+    #    '''
+    #    for level in range(self.nLevel):
+    #        for rateLevel in range(-level, level + 1):
+    #            actNode = self.nodes[level][rateLevel]
+
+    #            if actNode.branching == -1:
+
+    #            elif actNode.branching == 0:
+
+    #            elif actNode.branching == 1:
+  
+    #            else:
+    #                print('Unknown branching sheme!')
+    #                exit(1) 
+        
 
     def deleteOrphans(self):
         '''
@@ -238,8 +334,8 @@ forward[6.0] = 4.5
 forward[6.5] = 4.2
 forward[7.0] = 4.3
 
- 
 
+ 
 
  
                 
