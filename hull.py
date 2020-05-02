@@ -26,17 +26,6 @@ zeroCoupon[1]  = 0.03824
 zeroCoupon[2]  = 0.04512
 zeroCoupon[3]  = 0.05086
 zeroCoupon[4]  = 0.05566
-#zeroCoupon[5]  = 0.0
-#zeroCoupon[6]  = 0.0
-#zeroCoupon[7]  = 0.0
-#zeroCoupon[8]  = 0.0
-#zeroCoupon[9]  = 0.0
-#zeroCoupon[10] = 0.0 
-#zeroCoupon[11] = 0.0
-#zeroCoupon[12] = 0.0
-#zeroCoupon[13] = 0.0
-#zeroCoupon[14] = 0.0
- 
 
 tree = util.Tree(T, dt, k, theta, sigma, zeroCoupon)
 

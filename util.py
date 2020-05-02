@@ -210,57 +210,40 @@ class Tree:
                     actNode.RStar = rateLevel * self.dR 
 
         # Second stage
-        # TODO: debug this to Hull's example
 
-        # Q and alpha level 0
+        # Initalize Q and alpha
         self.nodes[0][0].Q = 1
         self.alphas[0] = self.zc[1] / self.dt
 
-        # Q and alpha level 1
-        #level = 1
+        # calculate Q and alpha
+        for level in range(1, self.nLevel):
 
-        #for level in range(self.nLevel - 1):
-        for level in [1, 2, 3]:
+            alphaTmp = 0   # There will be one alpha per level
+
             for rateLevel in range(-level, level + 1):
                 actNode = self.nodes[level][rateLevel]
                 if actNode != None:
-                    actQ = 0
+
+                    actQ = 0 #There will be on Q per node
                     for parent in actNode.parents:
 
-                        #print(level, rateLevel)
-                        #print(parent)
                         actParent = self.nodes[parent[0]][parent[1]]
 
-                        #print(actParent.Q, parent[2], np.exp(- (self.alphas[level - 1] + parent[1] * self.dR) * self.dt))
-                        #print(self.alphas[level - 1], parent[1], self.dR, self.dt)
+                        # parent[2] is transition probability between child and parent
                         actQ += actParent.Q * parent[2] * np.exp(- (self.alphas[level - 1] + parent[1] * self.dR) * self.dt) 
 
-                    #print('')
-
-                    #self.nodes[level][rateLevel].Q = actQ
+                    #Saving Q
                     actNode.Q = actQ
 
+                    # Calculatoin alpha
+                    alphaTmp += actNode.Q * np.exp(-rateLevel * self.dR * self.dt)
+                    print('{0:4d}{1:4d}{2:8.4f}{3:8.4f}'.format(level, rateLevel, actNode.Q, rateLevel * self.dR * self.dt))
+
+            # Save alpha to its own list (one value per level)
+            self.alphas[level] = (1 / self.dt) * (np.log(alphaTmp) + (level + 1) *  self.zc[level + 1])
 
 
-            #print('compute alpha')
-            tmp = 0
-            # TODO: Revert this loop
-            # TODO: Rename tmp to sometring descriptive
-            # TODO: After reverting, merge with loop above
-            #for rateLevel in range(-level, level + 1):
-            for rateLevel in range(level, -level - 1, -1):
-                actNode = self.nodes[level][rateLevel]
-                if actNode != None:
-                    #tmp += self.nodes[level][rateLevel].Q * np.exp(- rateLevel * self.dR * self.dt)
-                    tmp += actNode.Q * np.exp(- rateLevel * self.dR * self.dt)
-                    print(level, rateLevel, self.nodes[level][rateLevel].Q, - rateLevel * self.dR * self.dt)
-
-            #print(tmp)
-            self.alphas[level] = (1 / self.dt) * (np.log(tmp) + (level + 1) *  self.zc[level + 1])
-
-      
-            
-        # Broadcasting alphas
+        # Broadcasting alphas (add to every rate level in a given level)
         for level in range(self.nLevel):
             for rateLevel in range(-level, level + 1):
                 actNode = self.nodes[level][rateLevel]
