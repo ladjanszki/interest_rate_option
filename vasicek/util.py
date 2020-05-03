@@ -35,9 +35,9 @@ class Node:
         strRepr = ''
         strRepr += 'T = {0}\n'.format(self.time) 
         strRepr += 'j = {0}\n'.format(self.rateLevel) 
-        strRepr += 'br = {0}\n'.format(self.centralNodeIndex) 
+        #strRepr += 'br = {0}\n'.format(self.centralNodeIndex) 
         strRepr += 'R = {0:8.4f}%\n'.format(self.R * 100) # Rate printed in precentage
-        #strRepr += 'M = {0:8.4f}\n'.format(self.M) 
+        strRepr += 'M = {0:8.4f}\n'.format(self.M) 
         #strRepr += 'Q = {0:8.4f}\n'.format(self.Q) 
         #strRepr += str(self.parents)
 
@@ -60,8 +60,9 @@ class Tree:
         self.theta = theta # Theta from Vasiscek model
         self.sigma = sigma # Volatility
 
-        self.a = self.k # Different parametrisations
-        self.b = self.k * self.theta  # Different parametrisations
+        # Different parametrisations
+        self.a = self.theta 
+        self.b = self.k 
 
         # The time step array which currently has equidistant steps
         #self.dt = np.full(self.nLevel - 1, dt, dtype=float)
@@ -73,7 +74,6 @@ class Tree:
 
         # The interest rate displacement
         self.dR = self.V * np.sqrt(3)
-        print(self.dR)
        
         #self.K = None # Strike price of the interest rate option
 
@@ -129,24 +129,31 @@ class Tree:
                 actNode = self.nodes[level][rateLevel]
 
                 if actNode != None:
-                # Adding children list and transition probabilities
+                    probSum = 0
+                    centralNode = self.nodes[level + 1][actNode.centralNodeIndex]
+                    # Building children list and transition probabilities
                     for offset in range(-1, 2):
-                        #actTransProb = self.transProb[rateLevel][actNode.branching][offset]
-                        #childTuple = (level + 1, rateLevel + offset + actNode.branching, actTransProb)
-                        transProb = float(1 / 3) # Just for debugging
-                        child = self.nodes[level + 1][actNode.centralNodeIndex + offset]
-                        #print(child, transProb)
-                        actNode.children.append((child, transProb))
 
-        ## Building the parent list
-        #for level in range(self.nLevel - 1):
-        #    for rateLevel in range(-level, level + 1):
-        #        actNode = self.nodes[level][rateLevel]
+                        actChild = self.nodes[level + 1][actNode.centralNodeIndex + offset]
+                        #transProb = float(1 / 3) 
+                        transProb = self.calcTransProb(actNode, centralNode, offset)
+                        probSum += transProb
+                        actNode.children.append((actChild, transProb))
 
-        #        for child in actNode.children:
-        #            # child[2] is the transition probability from parent to children
-        #            self.nodes[child[0]][child[1]].parents.append((level, rateLevel, child[2]))
- 
+                # Checking if probabilities add up to one
+                if np.abs(probSum - 1) >= 10E-8:
+                    print('Error in probabilities: ', level, rateLevel, probSum)
+                    exit(1)
+
+        # Building the parent list (the last level is parent to no other node)
+        for level in range(self.nLevel - 1):
+            for rateLevel in range(-level, level + 1):
+                actNode = self.nodes[level][rateLevel]
+
+                for child, transProb in actNode.children:
+                    # child[2] is the transition probability from parent to children
+                    #self.nodes[child[0]][child[1]].parents.append((level, rateLevel, child[2]))
+                    child.parents.append((actNode, transProb))
 
 
     def calcCentralNode(self):
@@ -264,66 +271,33 @@ class Tree:
  
 
 
-    #def transProbDict(self):
-    #    '''
-    #    This function builds a dictionary with the transition probabilities 
-    #    for different branching schemes
+    def calcTransProb(self, actNode, actChild, offset):
+        '''
+        Given a parent and a child this function can calculate the transition probability between then
+  
+        Offset is the parameter is down (-1) middle(0) or up(1) probability have to be calculated
+        '''
 
-    #    The dictionary then save in the tree class and used when the connections in the tree are built
+        #print(actNode)
+        #print(actChild)
+        #print(offset)
 
-    #    The probabilities have to be calculated for all rateLevels of the tree (j dependence)
-    #    This can be achieved by calculating for the last level where all rateLevels are present
-    #    '''
+        eta = actNode.M - actChild.RStar #Transition probabilities should be calculated from the non-shifted tree
 
-    #    # Short notations for readable expressions
-    #    a = self.theta
+        if offset == -1: # Down
+            #print('Down')
+            return (1 / 6) + (eta**2 / (6 * self.V2)) + (eta / 2 * np.sqrt(3) * self.V)
+        elif offset == 0: # Middle
+            #print('Mid')
+            return (2 / 3) - (eta**2 / (3 * self.V2)) 
+        elif offset == 1: #Up
+            #print('Up')
+            return (1 / 6) + (eta**2 / (6 * self.V2)) - (eta / 2 * np.sqrt(3) * self.V)
+        else:
+            print('Error: Unknown branching scheme!')
+            #exit(1)
 
-    #    # Building the empty dictionary
-    #    level = self.nLevel - 1 # Building for the last level
-    #    for rateLevel in range(-level, level + 1):
-    #        self.transProb[rateLevel] = {}
-    #        for idx1 in range(-1, 2):
-    #            self.transProb[rateLevel][idx1] = {}
-    #            for idx2 in range(-1, 2): 
-    #                self.transProb[rateLevel][idx1][idx2] = None
-
-    #    # Calculating the probabilities
-    #    level = self.nLevel - 1 # Building for the last level
-    #    for rateLevel in range(-level, level + 1):
-
-    #        # Short notations for readable expressions
-    #        j = rateLevel
-    #        dt = self.dt
-
-    #        # Branching -1 (down, c)
-    #        self.transProb[j][-1][1]  = (7 / 6) + (1 / 2) * (a**2 * j**2 * dt**2 - 3 * a * j * dt)  
-    #        self.transProb[j][-1][0]  = (-1 / 3) - a**2 * j**2 * dt**2 + 2 * a * j * dt
-    #        self.transProb[j][-1][-1] = (1 / 6) + (1 / 2) * (a**2 * j**2 * dt**2 - a * j * dt)  
- 
-    #        # Branching 0 (mid, a)
-    #        self.transProb[j][0][1]  = (1 / 6) + (1 / 2) * (a**2 * j**2 * dt**2 - a * j * dt)  
-    #        self.transProb[j][0][0]  = (2 / 3) - a**2 * j**2 * dt**2
-    #        self.transProb[j][0][-1] = (1 / 6) + (1 / 2) * (a**2 * j**2 * dt**2 + a * j * dt)  
-    #        
-    #        # Branching 1 (up, b)
-    #        self.transProb[j][1][1]  = (1 / 6) + (1 / 2) * (a**2 * j**2 * dt**2 + a * j * dt)  
-    #        self.transProb[j][1][0]  = (-1 / 3) - a**2 * j**2 * dt**2 - 2 * a * j * dt
-    #        self.transProb[j][1][-1] = (7 / 6) + (1 / 2) * (a**2 * j**2 * dt**2 + 3 * a * j * dt)  
-
-
-    #    # Chacking if probabilities sum to 1
-    #    level = self.nLevel - 1 
-    #    for rateLevel in range(-level, level + 1):
-    #        for idx1 in range(-1, 2):
-
-    #            probSum = 0
-    #            for idx2 in range(-1, 2): 
-    #                probSum += self.transProb[rateLevel][idx1][idx2]
-
-    #            if np.abs(probSum - 1) >= 10E-8:
-    #                print('Error in probabilities: ', rateLevel, idx1, probSum)
-         
-
+        
 
     #def pricing(self, strike):
     #    '''
@@ -403,18 +377,13 @@ class Tree:
                 if actNode != None:
 
                     # Adding the node to the dot file
-                    #nodeLine = '{0} [shape=box label="{1}" pos="{2},{3}!"]'.format(actNode.nodeName, actNode, level * self.xSpacing, rateLevel * self.ySpacing)
                     nodeLine = '{0} [shape=box label="{1}" pos="{2},{3}!"]'.format(actNode.nodeName, actNode, level * self.xSpacing, actNode.R * self.ySpacing)
-                    #print(actLine)
                     nodes.append(nodeLine)
 
                     # Adding the edges to the dot file
                     for child, transProb in actNode.children:
  
                         # Children is stored as reference in a tuple with transition probability
-                        #print(child, transProb)
-                        #actChildren = self.nodes[child[0]][child[1]]
-                        #transProbLabel = child[2] # Transition probability label to all edges
                         edgeLine = '{0} -> {1} [taillabel="{2:8.4f}"]'.format(actNode.nodeName, child.nodeName, transProb) 
                         edges.append(edgeLine)
                 
@@ -474,43 +443,3 @@ class Tree:
             exit(1)
 
 
-    #def toPandas(self):
-    #    '''
-    #    This function puts all the data into a pandas DataFrame to make it easier to debug to Hull's book
-
-    #    '''
-
-    #    labels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']
-    #    df = pd.DataFrame(columns=['Node'] + labels)
-
-    #    tempDict = dict.fromkeys(['Node'] + labels, None)
-    #    tempDict['Node'] = ['R', 'pu', 'pm', 'pd']
-
-
-    #    labelCounter = 0
-    #    for level in range(self.nLevel):
-    #        for rateLevel in range(level + 1,-level): # WARNING reverted order to match the Hull book table
-    #            actNode = self.nodes[level][rateLevel]
-
-    #            # Adding only existing nodes
-    #            if actNode != None:
-    #                tempDict[labels[labelCounter]] = actNode.
-
-    #    print(tempDict)
-
-    #    return df
- 
-
-
-
-
-
- 
-
- 
-                
-              
-
-        
-      
- 

@@ -9,8 +9,8 @@ import util
 
 
 # Parameters
-#T = 7 # In years
-T = 2 # In years
+T = 7 # In years
+#T = 2 # In years
 dt = 0.5 # Time step
 #nLevel = int(T / dt)
 
