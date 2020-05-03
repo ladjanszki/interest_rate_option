@@ -24,9 +24,9 @@ class Node:
 
         self.R = 0
 
-        #self.payoff = 0.0 #Payoff for immediate exercise
-        #self.condExp = 0.0 #Conditional expectation of the child
-        #self.max = 0.0 #Maximum of the cond. expectation and the payoff
+        self.payoff = 0.0 #Payoff for immediate exercise
+        self.condExp = 0.0 #Conditional expectation of the subtree from this node
+        self.max = 0.0 #Maximum of the cond. expectation and the payoff
 
 
     def  __str__(self):
@@ -56,13 +56,10 @@ class Tree:
         self.theta = theta # Theta from Vasiscek model
         self.sigma = sigma # Volatility
 
-        #self.r0 = None # Starting interest rate
         #self.K = None # Strike price of the interest rate option
 
-        self.zc = zeroCoupon # Observer zero coupon curve to fit the tree to
+        self.zc = zeroCoupon # Observable zero coupon curve to fit the tree to
         self.alphas = np.zeros(self.nLevel, dtype=float) # Shifts per level
-
-        #print(self.zc)
 
         self.dR = sigma * np.sqrt(3 * dt)
 
@@ -98,6 +95,7 @@ class Tree:
 
         # Adding the short rates to the nodes
         self.addRates()
+
 
     def transProbDict(self):
         '''
@@ -237,7 +235,7 @@ class Tree:
 
                     # Calculatoin alpha
                     alphaTmp += actNode.Q * np.exp(-rateLevel * self.dR * self.dt)
-                    print('{0:4d}{1:4d}{2:8.4f}{3:8.4f}'.format(level, rateLevel, actNode.Q, rateLevel * self.dR * self.dt))
+                    #print('{0:4d}{1:4d}{2:8.4f}{3:8.4f}'.format(level, rateLevel, actNode.Q, rateLevel * self.dR * self.dt))
 
             # Save alpha to its own list (one value per level)
             self.alphas[level] = (1 / self.dt) * (np.log(alphaTmp) + (level + 1) *  self.zc[level + 1])
@@ -261,7 +259,49 @@ class Tree:
                 if actNode != None:
                     actNode.R = actNode.RStar + actNode.alpha
 
+    def pricing(self, strike):
+        '''
+        This method prices an option with the given strike for the
+        preiously built interest rate tree
+        '''
 
+        # Calculating only payoffs for the last level
+        level = self.nLevel -1
+        for rateLevel in range(-level, level + 1):
+            actNode = self.nodes[level][rateLevel]
+            if actNode != None:
+                actNode.payoff = np.maximum(0, actNode.R - strike)
+                actNode.condExp = 0.0
+                 
+                # The maximum will be used in lower levels
+                actNode.max = np.maximum(actNode.payoff, actNode.condExp)
+        
+
+        # Propagating the values back
+        for level in range(self.nLevel -2, -1, -1):
+            for rateLevel in range(-level, level + 1):
+                actNode = self.nodes[level][rateLevel]
+                if actNode != None:
+                    actNode.payoff = np.maximum(0, actNode.R - strike)
+                    
+                    actNode.condExp = 0
+                    for child in actNode.children:
+                        actChild = self.nodes[child[0]][child[1]]
+
+                        # child[2] is the transition probability from parent to actual children
+                        actNode.condExp += child[2] * actChild.max * np.exp(- self.dt * actNode.R)
+
+                    actNode.max = np.maximum(actNode.payoff, actNode.condExp)
+
+        # returning the price from the root node
+        return self.nodes[0][0].max
+                        
+
+
+        #self.payoff = 0.0 #Payoff for immediate exercise
+        #self.condExp = 0.0 #Conditional expectation of the subtree from this node
+        #self.max = 0.0 #Maximum of the cond. expectation and the payoff
+ 
     def deleteOrphans(self):
         '''
         Because of special tree building procedure ther can be orphan nodes with no parents

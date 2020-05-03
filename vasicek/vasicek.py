@@ -49,6 +49,8 @@ zeroCoupon = np.cumsum(forward).tolist()
 
 tree = util.Tree(T, dt, k, theta, sigma, zeroCoupon)
 
+print(tree.pricing(K))
+
 tree.visualize('pdf')
 
 
