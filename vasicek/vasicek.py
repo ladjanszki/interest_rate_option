@@ -9,7 +9,8 @@ import util
 
 
 # Parameters
-T = 7 # In years
+#T = 7 # In years
+T = 2 # In years
 dt = 0.5 # Time step
 #nLevel = int(T / dt)
 
@@ -46,10 +47,9 @@ forward[14] = 0.043
 #zeroCoupon = np.cumsum(forward).tolist()
 zeroCoupon = np.cumsum(forward).tolist()
 
-
 tree = util.Tree(T, dt, k, theta, sigma, zeroCoupon)
 
-print(tree.pricing(K))
+#print(tree.pricing(K))
 
 tree.visualize('pdf')
 
