@@ -29,8 +29,12 @@ zeroCoupon[4]  = 0.05566
 
 tree = util.Tree(T, dt, k, theta, sigma, zeroCoupon)
 
+
+print(tree.pricing(0.04))
+
 #df = tree.toPandas()
 #print(df)
+
 
 tree.visualize('pdf')
 
