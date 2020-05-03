@@ -43,6 +43,19 @@ class Node:
 
         return strRepr
 
+    def isOrphan(self):
+        '''
+        Boolean function which checks if the node has any parent
+
+        Ture if parent list is []
+        False otherwise
+        '''
+
+        if self.parents == []:
+            return True
+        else:
+            return False
+
 
 class Tree:
     '''
@@ -101,17 +114,14 @@ class Tree:
         # Calculating the central children for each node (k)
         self.calcCentralNode()
 
-
+        # Adding connections and transition probabilities
         self.addConnections()
  
-        # Building the transition probability dictionary
-        #self.transProbDict()
-
         # Adding connections, building the tree
         #self.addConnections()
 
         # Delete orphan nodes
-        #self.deleteOrphans()
+        self.deleteOrphans()
 
     def addConnections(self):
         '''
@@ -342,21 +352,24 @@ class Tree:
     #    #self.condExp = 0.0 #Conditional expectation of the subtree from this node
     #    #self.max = 0.0 #Maximum of the cond. expectation and the payoff
  
-    #def deleteOrphans(self):
-    #    '''
-    #    Because of special tree building procedure ther can be orphan nodes with no parents
-    #    These should be removed
-    #    ''' 
+    def deleteOrphans(self):
+        '''
+        Because of special tree building procedure ther can be orphan nodes with no parents
+        These should be removed
+        ''' 
 
-    #    # Delete subgraph if node has no parent
-    #    for level in range(self.nLevel):
-    #        for rateLevel in range(-level, level + 1):
-    #            actNode = self.nodes[level][rateLevel]
-    #            if (actNode.parents == []) and (not actNode.isRoot):
-    #                for child in actNode.children:
-    #                    actChild = self.nodes[child[0]][child[1]]
-    #                    actChild.parents.remove((level, rateLevel, child[2]))
-    #                self.nodes[level][rateLevel] = None
+        # Delete subgraph if node has no parent
+        for level in range(self.nLevel):
+            for rateLevel in range(-level, level + 1):
+                actNode = self.nodes[level][rateLevel]
+
+                if (actNode.isOrphan()) and (not actNode.isRoot):
+                    for child, transProb in actNode.children:
+                        #actChild = self.nodes[child[0]][child[1]]
+                        #actChild.parents.remove((level, rateLevel, child[2]))
+                        child.parents.remove((actNode, transProb))
+        
+                    self.nodes[level][rateLevel] = None
  
 
     def toGraphviz(self, dotFileName):
