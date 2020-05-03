@@ -4,6 +4,7 @@ based on the Vasicek model
 '''
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 import util
 
@@ -41,13 +42,31 @@ forward[11] = 0.048
 forward[12] = 0.045
 forward[13] = 0.042
 forward[14] = 0.043
- 
 
-# Zero coupon curve
-#zeroCoupon = np.cumsum(forward).tolist()
-zeroCoupon = np.cumsum(forward).tolist()
+# Calc to half years
+forward = forward / 2
+#print(forward)
 
-tree = util.Tree(T, dt, k, theta, sigma, zeroCoupon)
+tmp = forward.tolist()
+#print(tmp)
+
+zc = np.zeros(16, dtype=float)
+zc[0] = r0
+for i in range(len(tmp)):
+    #print(tmp[i])
+    cumsum = 0
+    for j in range(i + 1):
+        cumsum += tmp[j]
+    zc[i + 1] = cumsum / ((i + 1) / 2)
+
+#print(zc)
+#
+#plt.plot(zc)
+#plt.show()
+
+     
+
+tree = util.Tree(T, dt, k, theta, sigma, zc)
 
 #print(tree.pricing(K))
 

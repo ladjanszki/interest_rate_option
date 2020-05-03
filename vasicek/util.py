@@ -88,10 +88,11 @@ class Tree:
         # The interest rate displacement
         self.dR = self.V * np.sqrt(3)
        
-        #self.K = None # Strike price of the interest rate option
 
-        #self.zc = zeroCoupon # Observable zero coupon curve to fit the tree to
-        #self.alphas = np.zeros(self.nLevel, dtype=float) # Shifts per level
+        self.zc = zeroCoupon # Observable zero coupon curve to fit the tree to
+        self.alphas = np.zeros(self.nLevel, dtype=float) # Shifts per level
+
+        #self.K = None # Strike price of the interest rate option
 
 
         # Magic numbers for visualization
@@ -122,6 +123,9 @@ class Tree:
 
         # Delete orphan nodes
         self.deleteOrphans()
+
+        # Second stage, fitting the tree to the observed yield curve
+        self.shiftTree()
 
     def addConnections(self):
         '''
@@ -215,6 +219,9 @@ class Tree:
     def calcRates(self):
         '''
         Calculating the rates for all nodes
+
+        TODO: The calculatoin can be directly done into Node.R
+              Node.RStar can be deleted
         '''
 
         #Adding the short rate according to the first stage (zero tree mean)
@@ -227,11 +234,27 @@ class Tree:
                     actNode.RStar = rateLevel * self.dR 
                     #print(actNode.RStar)
 
-    #    # Second stage
+        #Adding up alphas and rStars
+        for level in range(self.nLevel):
+            for rateLevel in range(-level, level + 1):
+                actNode = self.nodes[level][rateLevel]
 
-    #    # Initalize Q and alpha
-    #    self.nodes[0][0].Q = 1
-    #    self.alphas[0] = self.zc[1] / self.dt
+                if actNode != None:
+                    actNode.R = actNode.RStar + actNode.alpha
+
+    def shiftTree(self):
+        '''
+        This tree calculates the second phase of the interest rate tree calculation
+        Aafter the initial flat tree is built it have to be fitted to the observed yield curve
+        
+        This can be done by a recursive calculation of Arrow-Debreu prices and shift parameters for each level
+        '''
+
+        # Root node Q and alpha
+        self.nodes[0][0].Q = 1
+        self.alphas[0] = self.zc[1] / self.dt
+
+        print(self.alphas)
 
     #    # calculate Q and alpha
     #    for level in range(1, self.nLevel):
@@ -261,16 +284,16 @@ class Tree:
     #        self.alphas[level] = (1 / self.dt) * (np.log(alphaTmp) + (level + 1) *  self.zc[level + 1])
 
 
-    #    # Broadcasting alphas (add to every rate level in a given level)
-    #    for level in range(self.nLevel):
-    #        for rateLevel in range(-level, level + 1):
-    #            actNode = self.nodes[level][rateLevel]
+        # Broadcasting alphas (add to every rate level in a given level)
+        for level in range(self.nLevel):
+            for rateLevel in range(-level, level + 1):
+                actNode = self.nodes[level][rateLevel]
 
-    #            # Only adding the rates if not deleted (orphan node)
-    #            if actNode != None:
-    #                self.nodes[level][rateLevel].alpha = self.alphas[level]
-    #     
-    #    
+                # Only adding the rates if not deleted (orphan node)
+                if actNode != None:
+                    self.nodes[level][rateLevel].alpha = self.alphas[level]
+         
+        
         #Adding up alphas and rStars
         for level in range(self.nLevel):
             for rateLevel in range(-level, level + 1):
@@ -278,7 +301,6 @@ class Tree:
 
                 if actNode != None:
                     actNode.R = actNode.RStar + actNode.alpha
- 
 
 
     def calcTransProb(self, actNode, actChild, offset):
