@@ -9,14 +9,17 @@ class Node:
     '''
     This class represents the nodes in the interest rate tree
     '''
-    def __init__(self, nodeName, time, rateLevel):
+    def __init__(self, nodeName, level, rateLevel, time):
         self.nodeName = nodeName
         self.children = [] # Childrens as tuples (level, rateLevel)
         self.parents = [] # Parents of the given node
         self.isRoot = False
         self.centralNodeIndex = 0 # The index of the centran node in the following level
         self.time = time #Timestamp of the given node
+
+        # Positions in the tree
         self.rateLevel = rateLevel
+        self.level = level
 
         self.RStar = 0 #Short rate in this world state
         self.Q = 0 #Arrow debreu price in this world state
@@ -30,6 +33,9 @@ class Node:
 
         self.M = 0 #Conditional expectation of the process value in this node (not the option calculation)
 
+        self.isEarlyExercise = False #If the option can be exercised early in this node
+        self.bgColor = '#FFFFFF' # background color for visualization
+
 
     def  __str__(self):
         strRepr = ''
@@ -37,11 +43,13 @@ class Node:
         strRepr += 'j = {0}\n'.format(self.rateLevel) 
         #strRepr += 'br = {0}\n'.format(self.centralNodeIndex) 
         strRepr += 'R = {0:8.4f}%\n'.format(self.R * 100) # Rate printed in precentage
-        strRepr += 'M = {0:8.4f}\n'.format(self.M) 
-        #strRepr += 'Q = {0:8.4f}\n'.format(self.Q) 
+        #strRepr += 'M = {0:8.4f}\n'.format(self.M) 
+        strRepr += 'Q = {0:8.4f}\n'.format(self.Q) 
+        strRepr += '\u03B1 = {0:8.4f}\n'.format(self.Q) 
         #strRepr += str(self.parents)
 
         return strRepr
+
 
     def isOrphan(self):
         '''
@@ -57,6 +65,15 @@ class Node:
             return False
 
 
+    def shiftNode(self, alpha):
+        '''
+        Method to shift the node with a predefined value
+        '''
+
+        self.alpha = alpha
+        self.R = self.RStar + self.alpha
+
+
 class Tree:
     '''
     This class represents the interest rate tree
@@ -67,6 +84,10 @@ class Tree:
         # Basic 
         self.T = T # Maturity
         self.nLevel = int(T / dt) + 1 # How many levels the tree has
+
+
+        self.earlyExerciseColor = '#BDBDBD' 
+        self.noExerciseColor = '#FFFFFF' 
 
         # Process
         self.k = k # Long term rate
@@ -92,9 +113,6 @@ class Tree:
         self.zc = zeroCoupon # Observable zero coupon curve to fit the tree to
         self.alphas = np.zeros(self.nLevel, dtype=float) # Shifts per level
 
-        #self.K = None # Strike price of the interest rate option
-
-
         # Magic numbers for visualization
         self.xSpacing = 4
         self.ySpacing = 150
@@ -117,15 +135,33 @@ class Tree:
 
         # Adding connections and transition probabilities
         self.addConnections()
- 
-        # Adding connections, building the tree
-        #self.addConnections()
 
         # Delete orphan nodes
         self.deleteOrphans()
 
         # Second stage, fitting the tree to the observed yield curve
         self.shiftTree()
+
+    def setEarlyExercise(self, tAlpha, tBeta):
+        '''
+        This method sets the isEarlyExercise tag in the Node class for every node
+    
+        For european options no early exercise is allowed
+        For american options early exercise is allowed ina all nodes
+        For bermuda optison early exercise is allowed for a given period of time
+        '''
+
+        for level in range(self.nLevel):
+            for rateLevel in range(-level, level + 1):
+                actNode = self.nodes[level][rateLevel]
+
+                if actNode != None:
+                    if (tAlpha <= actNode.time) and (actNode.time <= tBeta):
+                        actNode.isEarlyExercise = True
+                        actNode.bgColor = self.earlyExerciseColor
+                    else:
+                        actNode.isEarlyExercise = False
+                        actNode.bgColor = self.noExerciseColor
 
     def addConnections(self):
         '''
@@ -210,7 +246,8 @@ class Tree:
 
             for rateLevel in range(-level, level + 1):
                 nodeName = 'node_' + str(level) + '_' + str(rateLevel).replace('-', 'm')
-                self.nodes[level][rateLevel] = Node(nodeName, self.dt * level, rateLevel)
+                #self.nodes[level][rateLevel] = Node(nodeName, self.dt * level, rateLevel)
+                self.nodes[level][rateLevel] = Node(nodeName, level, rateLevel, level * self.dt)
 
         # Setting the root node
         self.nodes[0][0].isRoot = True
@@ -254,35 +291,28 @@ class Tree:
         self.nodes[0][0].Q = 1
         self.alphas[0] = self.zc[1] / self.dt
 
-        print(self.alphas)
+        # calculate Q and alpha
+        for level in range(1, self.nLevel):
 
-    #    # calculate Q and alpha
-    #    for level in range(1, self.nLevel):
+            alphaTmp = 0   # There will be one alpha per level
 
-    #        alphaTmp = 0   # There will be one alpha per level
+            for rateLevel in range(-level, level + 1):
+                actNode = self.nodes[level][rateLevel]
+                if actNode != None:
 
-    #        for rateLevel in range(-level, level + 1):
-    #            actNode = self.nodes[level][rateLevel]
-    #            if actNode != None:
+                    actQ = 0 #There will be on Q per node
+                    for parent, transProb in actNode.parents:
+                        actQ += parent.Q * transProb * np.exp(- (self.alphas[level - 1] + parent.rateLevel * self.dR) * self.dt) 
 
-    #                actQ = 0 #There will be on Q per node
-    #                for parent in actNode.parents:
+                    #Saving Q
+                    actNode.Q = actQ
 
-    #                    actParent = self.nodes[parent[0]][parent[1]]
+                    # Calculatoin alpha
+                    alphaTmp += actNode.Q * np.exp(-rateLevel * self.dR * self.dt)
+                    #print('{0:4d}{1:4d}{2:8.4f}{3:8.4f}'.format(level, rateLevel, actNode.Q, rateLevel * self.dR * self.dt))
 
-    #                    # parent[2] is transition probability between child and parent
-    #                    actQ += actParent.Q * parent[2] * np.exp(- (self.alphas[level - 1] + parent[1] * self.dR) * self.dt) 
-
-    #                #Saving Q
-    #                actNode.Q = actQ
-
-    #                # Calculatoin alpha
-    #                alphaTmp += actNode.Q * np.exp(-rateLevel * self.dR * self.dt)
-    #                #print('{0:4d}{1:4d}{2:8.4f}{3:8.4f}'.format(level, rateLevel, actNode.Q, rateLevel * self.dR * self.dt))
-
-    #        # Save alpha to its own list (one value per level)
-    #        self.alphas[level] = (1 / self.dt) * (np.log(alphaTmp) + (level + 1) *  self.zc[level + 1])
-
+            # Save alpha to its own list (one value per level)
+            self.alphas[level] = (1 / self.dt) * (np.log(alphaTmp) + (level + 1) *  self.zc[level + 1])
 
         # Broadcasting alphas (add to every rate level in a given level)
         for level in range(self.nLevel):
@@ -291,17 +321,7 @@ class Tree:
 
                 # Only adding the rates if not deleted (orphan node)
                 if actNode != None:
-                    self.nodes[level][rateLevel].alpha = self.alphas[level]
-         
-        
-        #Adding up alphas and rStars
-        for level in range(self.nLevel):
-            for rateLevel in range(-level, level + 1):
-                actNode = self.nodes[level][rateLevel]
-
-                if actNode != None:
-                    actNode.R = actNode.RStar + actNode.alpha
-
+                    self.nodes[level][rateLevel].shiftNode(self.alphas[level])
 
     def calcTransProb(self, actNode, actChild, offset):
         '''
@@ -331,48 +351,7 @@ class Tree:
 
         
 
-    #def pricing(self, strike):
-    #    '''
-    #    This method prices an option with the given strike for the
-    #    preiously built interest rate tree
-    #    '''
-
-    #    # Calculating only payoffs for the last level
-    #    level = self.nLevel -1
-    #    for rateLevel in range(-level, level + 1):
-    #        actNode = self.nodes[level][rateLevel]
-    #        if actNode != None:
-    #            actNode.payoff = np.maximum(0, actNode.R - strike)
-    #            actNode.condExp = 0.0
-    #             
-    #            # The maximum will be used in lower levels
-    #            actNode.max = np.maximum(actNode.payoff, actNode.condExp)
-    #    
-
-    #    # Propagating the values back
-    #    for level in range(self.nLevel -2, -1, -1):
-    #        for rateLevel in range(-level, level + 1):
-    #            actNode = self.nodes[level][rateLevel]
-    #            if actNode != None:
-    #                actNode.payoff = np.maximum(0, actNode.R - strike)
-    #                
-    #                actNode.condExp = 0
-    #                for child in actNode.children:
-    #                    actChild = self.nodes[child[0]][child[1]]
-
-    #                    # child[2] is the transition probability from parent to actual children
-    #                    actNode.condExp += child[2] * actChild.max * np.exp(- self.dt * actNode.R)
-
-    #                actNode.max = np.maximum(actNode.payoff, actNode.condExp)
-
-    #    # returning the price from the root node
-    #    return self.nodes[0][0].max
-    #                    
-
-
-    #    #self.payoff = 0.0 #Payoff for immediate exercise
-    #    #self.condExp = 0.0 #Conditional expectation of the subtree from this node
-    #    #self.max = 0.0 #Maximum of the cond. expectation and the payoff
+    
  
     def deleteOrphans(self):
         '''
@@ -404,6 +383,7 @@ class Tree:
         nodes = []
         edges = []
 
+
         for level in range(self.nLevel):
             for rateLevel in range(-level, level + 1):
                 actNode = self.nodes[level][rateLevel]
@@ -412,7 +392,7 @@ class Tree:
                 if actNode != None:
 
                     # Adding the node to the dot file
-                    nodeLine = '{0} [shape=box label="{1}" pos="{2},{3}!"]'.format(actNode.nodeName, actNode, level * self.xSpacing, actNode.R * self.ySpacing)
+                    nodeLine = '{0} [shape=box label="{1}" pos="{2},{3}!" style=filled fillcolor="{4}" ]'.format(actNode.nodeName, actNode, level * self.xSpacing, actNode.R * self.ySpacing, actNode.bgColor)
                     nodes.append(nodeLine)
 
                     # Adding the edges to the dot file
@@ -476,5 +456,53 @@ class Tree:
         else:
             print('ERROR: Unknown output format' + str(outFormat))
             exit(1)
+
+    def pricing(self, strike, tAlpha, tBeta):
+        '''
+        This method prices an option with given strike and early exercise
+        The early exercise is alloweb for time  t >= tAlpha and t <= tBeta 
+
+        The method uses the previously built trinomial tree
+        '''
+
+        # Calculating payoffs for the last level
+        level = self.nLevel - 1
+        for rateLevel in range(-level, level + 1):
+            actNode = self.nodes[level][rateLevel]
+            if actNode != None:
+                actNode.payoff = np.maximum(0, actNode.R - strike)
+                actNode.condExp = 0.0
+                 
+                # The maximum will be used in lower levels
+                actNode.max = np.maximum(actNode.payoff, actNode.condExp)
+        
+
+        # Propagating the values back
+        for level in range(self.nLevel -2, -1, -1):
+
+            actTime = level * self.dt
+            for rateLevel in range(-level, level + 1):
+                actNode = self.nodes[level][rateLevel]
+                if actNode != None:
+                    actNode.payoff = np.maximum(0, actNode.R - strike)
+                    
+                    actNode.condExp = 0
+                    for child in actNode.children:
+                        actChild = self.nodes[child[0]][child[1]]
+
+                        # child[2] is the transition probability from parent to actual children
+                        actNode.condExp += child[2] * actChild.max * np.exp(- self.dt * actNode.R)
+
+                    #if (tAlpha <= actNode.time) and 
+                    actNode.max = np.maximum(actNode.payoff, actNode.condExp)
+
+        # returning the price from the root node
+        return self.nodes[0][0].max
+                        
+
+
+        #self.payoff = 0.0 #Payoff for immediate exercise
+        #self.condExp = 0.0 #Conditional expectation of the subtree from this node
+        #self.max = 0.0 #Maximum of the cond. expectation and the payoff 
 
 
