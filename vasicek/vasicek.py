@@ -41,7 +41,7 @@ tree = util.Tree(T, dt, k, theta, sigma, yield_curve.genZc)
 #Settgin early exercise for all nodes
 tree.setEarlyExercise(tAlpha, tBeta)
 
-#print(tree.pricing(K))
+print(tree.pricing(K))
 
 tree.visualize('pdf')
 

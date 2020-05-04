@@ -457,7 +457,7 @@ class Tree:
             print('ERROR: Unknown output format' + str(outFormat))
             exit(1)
 
-    def pricing(self, strike, tAlpha, tBeta):
+    def pricing(self, strike,):
         '''
         This method prices an option with given strike and early exercise
         The early exercise is alloweb for time  t >= tAlpha and t <= tBeta 
@@ -479,30 +479,28 @@ class Tree:
 
         # Propagating the values back
         for level in range(self.nLevel -2, -1, -1):
-
-            actTime = level * self.dt
             for rateLevel in range(-level, level + 1):
                 actNode = self.nodes[level][rateLevel]
                 if actNode != None:
                     actNode.payoff = np.maximum(0, actNode.R - strike)
-                    
+
                     actNode.condExp = 0
-                    for child in actNode.children:
-                        actChild = self.nodes[child[0]][child[1]]
-
+                    for child, transProb in actNode.children:
+                        #actChild = self.nodes[child[0]][child[1]]
                         # child[2] is the transition probability from parent to actual children
-                        actNode.condExp += child[2] * actChild.max * np.exp(- self.dt * actNode.R)
+                        #actNode.condExp += child[2] * actChild.max * np.exp(- self.dt * actNode.R)
+                        #actNode.condExp += child[2] * actChild.max * np.exp(- self.dt * actNode.R)
+                        actNode.condExp += transProb* child.max * np.exp(- self.dt * actNode.R)
 
-                    #if (tAlpha <= actNode.time) and 
-                    actNode.max = np.maximum(actNode.payoff, actNode.condExp)
+
+                    # If early exercise is possible in this node the maximum of the payoff and cond. expacation is stored
+                    # If no early exercise pos the cond. expectation stored
+                    if actNode.isEarlyExercise: 
+                        actNode.max = np.maximum(actNode.payoff, actNode.condExp)
+                    else:
+                        actNode.max = actNode.condExp
 
         # returning the price from the root node
         return self.nodes[0][0].max
                         
-
-
-        #self.payoff = 0.0 #Payoff for immediate exercise
-        #self.condExp = 0.0 #Conditional expectation of the subtree from this node
-        #self.max = 0.0 #Maximum of the cond. expectation and the payoff 
-
 
