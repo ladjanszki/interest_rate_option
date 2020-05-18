@@ -79,15 +79,22 @@ class Tree:
     This class represents the interest rate tree
     This is not a tree actually it is an acyclic directed graph
     '''
-    def __init__(self, T, dt, k, theta, sigma, zeroCoupon):
+    def __init__(self, T, dt, k, theta, sigma, zeroCoupon, asCourseMaterial):
 
         # Basic 
         self.T = T # Maturity
         self.nLevel = int(T / dt) + 1 # How many levels the tree has
 
-
         self.earlyExerciseColor = '#BDBDBD' 
         self.noExerciseColor = '#FFFFFF' 
+
+        # Calculation method
+        # The tree supports two calculation methods 
+        # 1) from the book by Bringo and Mercurio
+        # They trim the tree and the conditional expectation do  not have an explicit long term rate dependence
+        # 2) from the course material
+        # Here k is not calculated and the conditional expectation has an explicit long term rate dependence
+        self.asCourseMaterial = asCourseMaterial
 
         # Process
         self.k = k # Long term rate
@@ -117,8 +124,6 @@ class Tree:
         self.xSpacing = 4
         self.ySpacing = 150
 
-        # Transition probability dictionary
-        #self.transProb = {}
 
         # Creating the nodes
         self.nodes = {} 
@@ -217,7 +222,15 @@ class Tree:
                 actNode = self.nodes[level][rateLevel]
 
                 if actNode != None:
-                    actNode.centralNodeIndex = int(round(actNode.M / self.dR))
+
+                    if self.asCourseMaterial:
+                        # No tree structure modification
+                        actNode.centralNodeIndex = rateLevel
+
+                    else:
+                        # Mean reversion by tree strucure
+                        actNode.centralNodeIndex = int(round(actNode.M / self.dR))
+                
  
 
     def calcM(self):
@@ -232,8 +245,15 @@ class Tree:
                 actNode = self.nodes[level][rateLevel]
 
                 if actNode != None:
-                    actNode.M = actNode.RStar * np.exp(- self.a * self.dt)
-                    #print(self.a, self.dt, np.exp(- self.a * self.dt))
+
+                    if self.asCourseMaterial:
+                        # Longer expression from course
+                        actNode.M = actNode.RStar * np.exp(- self.a * self.dt) + (self.b / self.a) * (1 - np.exp(-self.a * self.dt))
+
+                    else:
+                        # Short expression from Brigo - Mercurio
+                        actNode.M = actNode.RStar * np.exp(- self.a * self.dt)
+ 
 
 
     def createNodes(self):
@@ -457,7 +477,7 @@ class Tree:
             print('ERROR: Unknown output format' + str(outFormat))
             exit(1)
 
-    def pricing(self, strike,):
+    def pricing(self, strike):
         '''
         This method prices an option with given strike and early exercise
         The early exercise is alloweb for time  t >= tAlpha and t <= tBeta 
@@ -490,7 +510,7 @@ class Tree:
                         # child[2] is the transition probability from parent to actual children
                         #actNode.condExp += child[2] * actChild.max * np.exp(- self.dt * actNode.R)
                         #actNode.condExp += child[2] * actChild.max * np.exp(- self.dt * actNode.R)
-                        actNode.condExp += transProb* child.max * np.exp(- self.dt * actNode.R)
+                        actNode.condExp += transProb * child.max * np.exp(- self.dt * actNode.R)
 
 
                     # If early exercise is possible in this node the maximum of the payoff and cond. expacation is stored

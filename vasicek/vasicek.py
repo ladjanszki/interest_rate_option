@@ -9,12 +9,11 @@ import matplotlib.pyplot as plt
 import util
 import yield_curve
 
+# dr(t) = (k - theta * r(t))dt + sigma dW(t)
 
 # Parameters
 T = 7 # In years
-#T = 2 # In years
 dt = 0.5 # Time step
-#nLevel = int(T / dt)
 
 k = 0.0045 # 0.45%
 theta = 0.1 # 10%
@@ -30,19 +29,63 @@ K = 0.047 # 4.7%
 tAlpha = 2
 tBeta = 5
 
+# Set the zero coupon yield curves
+yieldCurve = yield_curve.zc # From the homework description
 
-#plt.plot(yield_curve.genZc)
-#plt.show()
+# Swithc between calculation modes
+asCourseMaterial = False
+
+# Sweeping sigma 
+sweep = np.linspace(0.001, 0.05, 50)
+prices = np.empty_like(sweep)
+
+for idx, actSigma in enumerate(sweep):
+    tree = util.Tree(T, dt, k, theta, actSigma, yieldCurve, asCourseMaterial)
+    tree.setEarlyExercise(tAlpha, tBeta)
+    #print(tree.pricing(K))  
+    prices[idx] = tree.pricing(K)
+
+plt.plot(sweep, prices)
+plt.xlabel(r'$\sigma$')
+plt.ylabel('Swaption price')
+plt.savefig('vasicek_sigma_sweep.png')
+plt.show()
+
+# Sweeping theta
+sweep = np.linspace(0.01, 0.5, 50)
+prices = np.empty_like(sweep)
+
+for idx, actTheta in enumerate(sweep):
+    tree = util.Tree(T, dt, k, actTheta, sigma, yieldCurve, asCourseMaterial)
+    tree.setEarlyExercise(tAlpha, tBeta)
+    prices[idx] = tree.pricing(K)
+
+plt.plot(sweep, prices)
+plt.xlabel(r'$\theta$')
+plt.ylabel('Swaption price')
+plt.savefig('vasicek_theta_sweep.png')
+plt.show()
+
+# Sweeping 
+sweep = np.linspace(0.0001, 0.0099, 50)
+prices = np.empty_like(sweep)
+
+for idx, actk in enumerate(sweep):
+    tree = util.Tree(T, dt, actk, theta, sigma, yieldCurve, asCourseMaterial)
+    tree.setEarlyExercise(tAlpha, tBeta)
+    prices[idx] = tree.pricing(K)
+
+plt.plot(sweep, prices)
+plt.xlabel('k')
+plt.ylabel('Swaption price')
+plt.savefig('vasicek_k_sweep.png')
+plt.show()
+ 
 
 
-tree = util.Tree(T, dt, k, theta, sigma, yield_curve.genZc)
 
+ 
 
-#Settgin early exercise for all nodes
-tree.setEarlyExercise(tAlpha, tBeta)
-
-print(tree.pricing(K))
-
-tree.visualize('pdf')
+ 
 
 
