@@ -1,0 +1,27 @@
+\documentclass{article}
+
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amsfonts}
+\usepackage[magyar]{babel}
+\usepackage[utf8]{inputenc}
+
+\begin{document}
+
+\begin{itemize}
+\item A megadott forward görbe féléves periódusra vonatkozó forward kamatot tartlamaz \textbf{évesítve}.
+\item $z(i)$ a zéro kupon görbe értéke $i \Delta t$ időpontban
+\item $f(j)$ a megadott forward görbe értéke $j \Delta t$ időpontban
+\item $r_0$ a feladat szövegében adott
+\end{itemize}
+
+\begin{equation}
+z(0) = r_0
+\end{equation}
+
+\begin{equation}
+z(i) = \frac{1}{i \Delta t} \sum_{j=0}^{i-1} f(j) \quad i \in [1, I], \quad I = \frac{T + \Delta t}{\Delta t}
+\end{equation}
+
+\end{document}
+
