@@ -1,0 +1,102 @@
+digraph{
+
+node_0_0 [shape=box label="T = 0
+j = 0
+R =   3.8240%
+Q =   1.0000
+" pos="0,5.736000000000001!"]
+node_1_m1 [shape=box label="T = 1
+j = -1
+R =   3.4729%
+Q =   0.1604
+" pos="4,5.209423788645412!"]
+node_1_0 [shape=box label="T = 1
+j = 0
+R =   5.2050%
+Q =   0.6417
+" pos="4,7.807499999998728!"]
+node_1_1 [shape=box label="T = 1
+j = 1
+R =   6.9371%
+Q =   0.1604
+" pos="4,10.405576211352043!"]
+node_2_m2 [shape=box label="T = 2
+j = -2
+R =   2.7879%
+Q =   0.0189
+" pos="8,4.181922576841578!"]
+node_2_m1 [shape=box label="T = 2
+j = -1
+R =   4.5200%
+Q =   0.2033
+" pos="8,6.779998788194894!"]
+node_2_0 [shape=box label="T = 2
+j = 0
+R =   6.2520%
+Q =   0.4736
+" pos="8,9.378074999548211!"]
+node_2_1 [shape=box label="T = 2
+j = 1
+R =   7.9841%
+Q =   0.1998
+" pos="8,11.976151210901527!"]
+node_2_2 [shape=box label="T = 2
+j = 2
+R =   9.7162%
+Q =   0.0182
+" pos="8,14.574227422254841!"]
+node_3_m2 [shape=box label="T = 3
+j = -2
+R =   3.5786%
+Q =   0.0399
+" pos="12,5.3679281065158415!"]
+node_3_m1 [shape=box label="T = 3
+j = -1
+R =   5.3107%
+Q =   0.2022
+" pos="12,7.9660043178691575!"]
+node_3_0 [shape=box label="T = 3
+j = 0
+R =   7.0427%
+Q =   0.3836
+" pos="12,10.564080529222473!"]
+node_3_1 [shape=box label="T = 3
+j = 1
+R =   8.7748%
+Q =   0.1957
+" pos="12,13.162156740575789!"]
+node_3_2 [shape=box label="T = 3
+j = 2
+R =  10.5068%
+Q =   0.0371
+" pos="12,15.760232951929105!"]
+
+node_0_0 -> node_1_m1 [taillabel="  0.1667"]
+node_0_0 -> node_1_0 [taillabel="  0.6667"]
+node_0_0 -> node_1_1 [taillabel="  0.1667"]
+node_1_m1 -> node_2_m2 [taillabel="  0.1217"]
+node_1_m1 -> node_2_m1 [taillabel="  0.6567"]
+node_1_m1 -> node_2_0 [taillabel="  0.2217"]
+node_1_0 -> node_2_m1 [taillabel="  0.1667"]
+node_1_0 -> node_2_0 [taillabel="  0.6667"]
+node_1_0 -> node_2_1 [taillabel="  0.1667"]
+node_1_1 -> node_2_0 [taillabel="  0.2217"]
+node_1_1 -> node_2_1 [taillabel="  0.6567"]
+node_1_1 -> node_2_2 [taillabel="  0.1217"]
+node_2_m2 -> node_3_m2 [taillabel="  0.8867"]
+node_2_m2 -> node_3_m1 [taillabel="  0.0267"]
+node_2_m2 -> node_3_0 [taillabel="  0.0867"]
+node_2_m1 -> node_3_m2 [taillabel="  0.1217"]
+node_2_m1 -> node_3_m1 [taillabel="  0.6567"]
+node_2_m1 -> node_3_0 [taillabel="  0.2217"]
+node_2_0 -> node_3_m1 [taillabel="  0.1667"]
+node_2_0 -> node_3_0 [taillabel="  0.6667"]
+node_2_0 -> node_3_1 [taillabel="  0.1667"]
+node_2_1 -> node_3_0 [taillabel="  0.2217"]
+node_2_1 -> node_3_1 [taillabel="  0.6567"]
+node_2_1 -> node_3_2 [taillabel="  0.1217"]
+node_2_2 -> node_3_0 [taillabel="  0.0867"]
+node_2_2 -> node_3_1 [taillabel="  0.0267"]
+node_2_2 -> node_3_2 [taillabel="  0.8867"]
+}
+
